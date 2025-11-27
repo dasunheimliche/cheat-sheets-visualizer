@@ -1,0 +1,137 @@
+---
+import BaseLayout from '../../../../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const allCheatsheets = await getCollection('cheatsheets');
+  
+  const combinations = new Set<string>();
+  allCheatsheets.forEach((entry) => {
+    const parts = entry.slug.split('/');
+    const hasValidStructure = parts.length >= 4 && parts[0] && parts[1] && parts[2];
+    const noUnderscoreParts = !parts.some(p => p.startsWith('_'));
+    if (hasValidStructure && noUnderscoreParts) {
+      combinations.add(`${parts[0]}/${parts[1]}/${parts[2]}`);
+    }
+  });
+
+  return Array.from(combinations).map((combo) => {
+    const [topic, type, source] = combo.split('/');
+    return { params: { topic, type, source } };
+  });
+}
+
+const { topic, type, source } = Astro.params;
+
+const allCheatsheets = await getCollection('cheatsheets');
+
+const getNumericPrefix = (slug: string): number[] => {
+  const filename = slug.split('/').pop() || '';
+  const match = filename.match(/^([\d.-]+)/);
+  if (!match) return [999];
+  return match[1].split(/[.-]/).filter(Boolean).map(n => parseInt(n, 10));
+};
+
+const compareNumericPrefixes = (a: number[], b: number[]): number => {
+  const maxLength = Math.max(a.length, b.length);
+  for (let i = 0; i < maxLength; i++) {
+    const numA = a[i] ?? 0;
+    const numB = b[i] ?? 0;
+    if (numA !== numB) return numA - numB;
+  }
+  return 0;
+};
+
+const cheatsheets = allCheatsheets
+  .filter((entry) => {
+    const parts = entry.slug.split('/');
+    return parts.length >= 4 && parts[0] === topic && parts[1] === type && parts[2] === source;
+  })
+  .sort((a, b) => {
+    const prefixA = getNumericPrefix(a.slug);
+    const prefixB = getNumericPrefix(b.slug);
+    return compareNumericPrefixes(prefixA, prefixB);
+  });
+
+const getDisplayName = (slug: string): string => {
+  const parts = slug.split('/');
+  const filename = parts[parts.length - 1];
+  const withoutPrefix = filename.replace(/^[\d.-]+-?/, '');
+  return withoutPrefix.replace(/-/g, ' ');
+};
+
+const getSectionNumber = (slug: string): string => {
+  const filename = slug.split('/').pop() || '';
+  const match = filename.match(/^([\d.-]+)/);
+  if (!match) return '';
+  return match[1].replace(/-/g, '.');
+};
+
+const getCheatsheetUrl = (slug: string): string => {
+  const parts = slug.split('/');
+  const remainingPath = parts.slice(3).join('/');
+  return `/topics/${topic}/${type}/${source}/${remainingPath}`;
+};
+---
+
+<BaseLayout title={`${source} | CheatSheets Visualizer`}>
+  <main class="min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+      <nav class="text-sm mb-8">
+        <ol class="flex items-center gap-2 text-zinc-400">
+          <li><a href="/" class="hover:text-zinc-200">Home</a></li>
+          <li>/</li>
+          <li><a href="/topics" class="hover:text-zinc-200">Topics</a></li>
+          <li>/</li>
+          <li><a href={`/topics/${topic}`} class="hover:text-zinc-200 capitalize">{topic}</a></li>
+          <li>/</li>
+          <li><a href={`/topics/${topic}/${type}`} class="hover:text-zinc-200 capitalize">{type?.replace(/-/g, ' ')}</a></li>
+          <li>/</li>
+          <li class="text-zinc-200">{source?.replace(/-/g, ' ')}</li>
+        </ol>
+      </nav>
+
+      <div class="mb-12">
+        <h1 class="text-4xl font-bold mb-2">📖 {source?.replace(/-/g, ' ')}</h1>
+        <p class="text-zinc-400">{cheatsheets.length} cheat sheets disponibles</p>
+      </div>
+
+      {cheatsheets.length > 0 ? (
+        <div class="space-y-4">
+          {cheatsheets.map((sheet) => {
+            const sectionNumber = getSectionNumber(sheet.slug);
+            return (
+              <a 
+                href={getCheatsheetUrl(sheet.slug)}
+                class="group flex items-center gap-4 bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-zinc-600 transition-all hover:bg-zinc-800/50"
+              >
+                <div class="flex items-center justify-center min-w-12 h-10 bg-zinc-800 rounded-lg text-zinc-400 font-mono text-sm group-hover:bg-blue-600 group-hover:text-white transition-colors px-2">
+                  {sectionNumber || '—'}
+                </div>
+                <div class="flex-1">
+                  <h2 class="text-lg font-semibold group-hover:text-blue-400 transition-colors capitalize">
+                    {sheet.data.title || getDisplayName(sheet.slug)}
+                  </h2>
+                  {sheet.data.description && (
+                    <p class="text-zinc-500 text-sm mt-1">{sheet.data.description}</p>
+                  )}
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-600 group-hover:text-blue-400 transition-colors" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+              </a>
+            );
+          })}
+        </div>
+      ) : (
+        <div class="text-center py-20 bg-zinc-900 rounded-xl border border-zinc-800">
+          <div class="text-6xl mb-4">📭</div>
+          <h2 class="text-xl font-semibold mb-2">No hay cheat sheets aún</h2>
+          <p class="text-zinc-400">
+            Añade archivos .md en esta carpeta
+          </p>
+        </div>
+      )}
+    </div>
+  </main>
+</BaseLayout>

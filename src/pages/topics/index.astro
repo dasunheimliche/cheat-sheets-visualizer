@@ -1,0 +1,145 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const metaFiles = import.meta.glob('/src/content/cheatsheets/*/_meta.json', { eager: true });
+
+interface TopicMeta {
+  title: string;
+  tag: string;
+  icon: string;
+  description: string;
+}
+
+const topics: { slug: string; meta: TopicMeta }[] = [];
+
+Object.entries(metaFiles).forEach(([filePath, module]) => {
+  const match = filePath.match(/\/src\/content\/cheatsheets\/([^\/]+)\/_meta\.json/);
+  if (match) {
+    const slug = match[1];
+    const meta = module as TopicMeta;
+    topics.push({ slug, meta });
+  }
+});
+
+topics.sort((a, b) => a.meta.title.localeCompare(b.meta.title));
+
+const allTags = [...new Set(topics.map(t => t.meta.tag))].sort();
+
+const topicsByTag: Record<string, typeof topics> = {};
+topics.forEach(topic => {
+  const tag = topic.meta.tag;
+  if (!topicsByTag[tag]) {
+    topicsByTag[tag] = [];
+  }
+  topicsByTag[tag].push(topic);
+});
+---
+
+<BaseLayout title="Topics | CheatSheets Visualizer">
+  <main class="min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+      <div class="mb-8">
+        <a href="/" class="text-zinc-400 hover:text-zinc-200 text-sm mb-4 inline-block">
+          ← Volver al inicio
+        </a>
+        <h1 class="text-4xl font-bold mb-2">📚 Topics</h1>
+        <p class="text-zinc-400">Selecciona una temática para explorar</p>
+      </div>
+
+      <div class="flex gap-2 mb-10 flex-wrap">
+        <button
+          data-tag-filter=""
+          class="tag-filter px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white transition-colors"
+        >
+          Todos
+        </button>
+        {allTags.map(tag => (
+          <button
+            data-tag-filter={tag}
+            class="tag-filter px-4 py-2 rounded-lg text-sm font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors"
+          >
+            {tag}
+          </button>
+        ))}
+      </div>
+
+      {topics.length > 0 ? (
+        <div class="space-y-12">
+          {Object.entries(topicsByTag).map(([tag, tagTopics]) => (
+            <section data-tag-group={tag} class="tag-group">
+              <h2 class="text-lg font-semibold text-zinc-400 mb-4 flex items-center gap-2">
+                <span class="w-8 h-0.5 bg-zinc-700"></span>
+                {tag}
+                <span class="text-zinc-600 text-sm font-normal">({tagTopics.length})</span>
+              </h2>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {tagTopics.map(({ slug, meta }) => (
+                  <a 
+                    href={`/topics/${slug}`}
+                    class="group bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-zinc-600 transition-all hover:bg-zinc-800/50"
+                  >
+                    <div class="flex items-start gap-4">
+                      <span class="text-3xl">{meta.icon}</span>
+                      <div class="flex-1 min-w-0">
+                        <h3 class="text-lg font-semibold group-hover:text-blue-400 transition-colors">
+                          {meta.title}
+                        </h3>
+                        <p class="text-zinc-500 text-sm mt-1 line-clamp-2">
+                          {meta.description}
+                        </p>
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <div class="text-center py-20 bg-zinc-900 rounded-xl border border-zinc-800">
+          <div class="text-6xl mb-4">📭</div>
+          <h2 class="text-xl font-semibold mb-2">No hay topics aún</h2>
+          <p class="text-zinc-400">
+            Añade carpetas con <code class="bg-zinc-800 px-2 py-1 rounded">_meta.json</code> en <code class="bg-zinc-800 px-2 py-1 rounded">src/content/cheatsheets/</code>
+          </p>
+        </div>
+      )}
+    </div>
+  </main>
+</BaseLayout>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const filterBtns = document.querySelectorAll('.tag-filter');
+    const tagGroups = document.querySelectorAll('.tag-group');
+    
+    let activeTag = '';
+
+    const applyFilter = () => {
+      tagGroups.forEach(group => {
+        const groupTag = (group as HTMLElement).dataset.tagGroup || '';
+        const shouldShow = activeTag === '' || groupTag === activeTag;
+        (group as HTMLElement).style.display = shouldShow ? '' : 'none';
+      });
+
+      filterBtns.forEach(btn => {
+        const btnTag = (btn as HTMLElement).dataset.tagFilter || '';
+        if (btnTag === activeTag) {
+          btn.classList.add('bg-blue-600', 'text-white');
+          btn.classList.remove('bg-zinc-800', 'text-zinc-300');
+        } else {
+          btn.classList.remove('bg-blue-600', 'text-white');
+          btn.classList.add('bg-zinc-800', 'text-zinc-300');
+        }
+      });
+    };
+
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeTag = (btn as HTMLElement).dataset.tagFilter || '';
+        applyFilter();
+      });
+    });
+  });
+</script>

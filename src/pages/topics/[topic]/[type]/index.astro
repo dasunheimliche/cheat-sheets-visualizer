@@ -1,0 +1,92 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const allCheatsheets = await getCollection('cheatsheets');
+  
+  const combinations = new Set<string>();
+  allCheatsheets.forEach((entry) => {
+    const parts = entry.slug.split('/');
+    if (parts[0] && parts[1] && !parts[0].startsWith('_') && !parts[1].startsWith('_')) {
+      combinations.add(`${parts[0]}/${parts[1]}`);
+    }
+  });
+
+  return Array.from(combinations).map((combo) => {
+    const [topic, type] = combo.split('/');
+    return { params: { topic, type } };
+  });
+}
+
+const { topic, type } = Astro.params;
+
+const allCheatsheets = await getCollection('cheatsheets');
+
+const sources = new Set<string>();
+allCheatsheets.forEach((entry) => {
+  const parts = entry.slug.split('/');
+  if (parts[0] === topic && parts[1] === type && parts[2] && !parts[2].startsWith('_')) {
+    sources.add(parts[2]);
+  }
+});
+
+const sourceList = Array.from(sources).sort();
+
+const getFileCount = (source: string): number => {
+  return allCheatsheets.filter((entry) => {
+    const parts = entry.slug.split('/');
+    return parts[0] === topic && parts[1] === type && parts[2] === source;
+  }).length;
+};
+---
+
+<BaseLayout title={`${type} - ${topic} | CheatSheets Visualizer`}>
+  <main class="min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+      <nav class="text-sm mb-8">
+        <ol class="flex items-center gap-2 text-zinc-400">
+          <li><a href="/" class="hover:text-zinc-200">Home</a></li>
+          <li>/</li>
+          <li><a href="/topics" class="hover:text-zinc-200">Topics</a></li>
+          <li>/</li>
+          <li><a href={`/topics/${topic}`} class="hover:text-zinc-200 capitalize">{topic}</a></li>
+          <li>/</li>
+          <li class="text-zinc-200 capitalize">{type?.replace(/-/g, ' ')}</li>
+        </ol>
+      </nav>
+
+      <div class="mb-12">
+        <h1 class="text-4xl font-bold mb-2 capitalize">📋 {type?.replace(/-/g, ' ')}</h1>
+        <p class="text-zinc-400">Selecciona una fuente</p>
+      </div>
+
+      {sourceList.length > 0 ? (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {sourceList.map((source) => (
+            <a 
+              href={`/topics/${topic}/${type}/${source}`}
+              class="group bg-zinc-900 border border-zinc-800 rounded-xl p-6 hover:border-zinc-600 transition-all hover:bg-zinc-800/50"
+            >
+              <div class="text-4xl mb-4">📖</div>
+              <h2 class="text-xl font-semibold group-hover:text-blue-400 transition-colors">
+                {source.replace(/-/g, ' ')}
+              </h2>
+              <p class="text-zinc-500 text-sm mt-2">
+                {getFileCount(source)} archivos
+              </p>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div class="text-center py-20 bg-zinc-900 rounded-xl border border-zinc-800">
+          <div class="text-6xl mb-4">📭</div>
+          <h2 class="text-xl font-semibold mb-2">No hay fuentes aún</h2>
+          <p class="text-zinc-400">
+            Añade carpetas con archivos .md
+          </p>
+        </div>
+      )}
+    </div>
+  </main>
+</BaseLayout>

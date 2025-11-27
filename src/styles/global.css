@@ -1,0 +1,194 @@
+@import "tailwindcss";
+
+/* ============================================
+   SCROLL BEHAVIOR
+   ============================================ */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ============================================
+   CUSTOM SCROLLBAR
+   ============================================ */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #3f3f46;
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #52525b;
+}
+
+/* ============================================
+   CUSTOM PROPERTIES
+   ============================================ */
+:root {
+  --color-essential: #ef4444;    /* 🔴 Rojo */
+  --color-frequent: #eab308;     /* 🟡 Amarillo */
+  --color-reference: #3b82f6;    /* 🔵 Azul */
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+body {
+  @apply bg-zinc-950 text-zinc-100 min-h-screen;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ============================================
+   PROSE STYLES (para contenido MD)
+   ============================================ */
+.prose-cheatsheet {
+  @apply max-w-4xl mx-auto;
+
+  /* Headings */
+  h2 {
+    @apply text-2xl font-bold mt-12 mb-4;
+    scroll-margin-top: 2rem;
+  }
+
+  h3 {
+    @apply text-xl font-semibold mt-8 mb-3 text-zinc-200;
+  }
+
+  h4 {
+    @apply text-lg font-medium mt-6 mb-2 text-zinc-300;
+  }
+
+  /* Paragraphs */
+  p {
+    @apply text-zinc-300 leading-relaxed mb-4;
+  }
+
+  /* Lists */
+  ul, ol {
+    @apply mb-4 pl-6 text-zinc-300;
+  }
+
+  ul {
+    @apply list-disc;
+  }
+
+  ol {
+    @apply list-decimal;
+  }
+
+  li {
+    @apply mb-2;
+  }
+
+  /* Code blocks */
+  pre {
+    @apply bg-zinc-900 rounded-lg p-4 overflow-x-auto mb-6 border border-zinc-800;
+  }
+
+  code {
+    @apply text-sm font-mono;
+  }
+
+  p code,
+  li code {
+    @apply bg-zinc-800 px-1.5 py-0.5 rounded text-pink-400;
+  }
+
+  /* Tables */
+  table {
+    @apply w-full mb-6 text-sm;
+  }
+
+  th {
+    @apply bg-zinc-800 px-4 py-2 text-left font-semibold text-zinc-200 border border-zinc-700;
+  }
+
+  td {
+    @apply px-4 py-2 border border-zinc-700 text-zinc-300;
+  }
+
+  tr:nth-child(even) {
+    @apply bg-zinc-900/50;
+  }
+
+  /* Horizontal rules */
+  hr {
+    @apply border-zinc-700 my-8;
+  }
+
+  /* Strong & emphasis */
+  strong {
+    @apply font-semibold text-zinc-100;
+  }
+
+  em {
+    @apply italic text-zinc-400;
+  }
+
+  /* Links */
+  a {
+    @apply text-blue-400 hover:text-blue-300 underline;
+  }
+
+  /* Blockquotes */
+  blockquote {
+    @apply border-l-4 border-zinc-600 pl-4 italic text-zinc-400 my-4;
+  }
+
+  /* Images */
+  img {
+    @apply rounded-xl my-6 w-full object-cover border border-zinc-800;
+    max-height: 400px;
+  }
+
+  /* Image with caption (if wrapped in figure) */
+  figure {
+    @apply my-6;
+  }
+
+  figure img {
+    @apply mb-2;
+  }
+
+  figcaption {
+    @apply text-center text-sm text-zinc-500;
+  }
+}
+
+/* ============================================
+   CALLOUT BOXES (🔴 🟡 🔵 ⚪)
+   ============================================ */
+.prose-cheatsheet p:has(strong:first-child) {
+  @apply rounded-lg p-4 my-4;
+}
+
+/* 🔴 Fundamental / Esencial */
+.prose-cheatsheet p:has(strong:first-child:is(:contains("Fundamental"), :contains("ESENCIAL"))) {
+  @apply bg-red-950/50 border border-red-800;
+}
+
+/* 🟡 Importante / Frecuente */
+.prose-cheatsheet p:has(strong:first-child:is(:contains("Importante"), :contains("FRECUENTE"))) {
+  @apply bg-yellow-950/50 border border-yellow-800;
+}
+
+/* 🔵 Específico / Referencia */
+.prose-cheatsheet p:has(strong:first-child:is(:contains("Específico"), :contains("REFERENCIA"))) {
+  @apply bg-blue-950/50 border border-blue-800;
+}
+
+/* ⚪ Raro / Obsoleto */
+.prose-cheatsheet p:has(strong:first-child:is(:contains("Raro"), :contains("Obsoleto"), :contains("OBSOLETO"))) {
+  @apply bg-zinc-800/50 border border-zinc-600;
+}

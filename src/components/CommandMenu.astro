@@ -1,0 +1,455 @@
+---
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  headings: Heading[];
+}
+
+const { headings } = Astro.props;
+
+// Filtrar solo h2
+const h2Headings = headings.filter((h) => h.depth === 2);
+
+// Extraer nivel del heading
+const getLevel = (text: string): 'essential' | 'frequent' | 'reference' | 'rare' | 'none' => {
+  if (text.includes('🔴')) return 'essential';
+  if (text.includes('🟡')) return 'frequent';
+  if (text.includes('🔵')) return 'reference';
+  if (text.includes('⚪')) return 'rare';
+  return 'none';
+};
+
+// Extraer dominio del heading (estrellas)
+const getMastery = (text: string): number => {
+  const stars = (text.match(/⭐/g) || []).length;
+  return Math.min(stars, 3);
+};
+
+// Limpiar texto
+const cleanText = (text: string): string => {
+  return text.replace(/🔴|🟡|🔵|⚪|⭐/g, '').trim();
+};
+---
+
+<!-- Botón flotante móvil -->
+<button
+  id="cmd-trigger"
+  class="fixed bottom-6 right-6 z-40 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg shadow-blue-600/25 transition-colors"
+  aria-label="Abrir menú de navegación"
+>
+  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  </svg>
+</button>
+
+<!-- Modal backdrop -->
+<div
+  id="cmd-backdrop"
+  class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200"
+></div>
+
+<!-- Command Menu Modal -->
+<div
+  id="cmd-modal"
+  class="fixed z-50 hidden opacity-0 translate-y-4 lg:translate-y-0 transition-all duration-200
+         inset-x-0 bottom-0 lg:bottom-auto lg:top-[20%] lg:left-1/2 lg:-translate-x-1/2
+         lg:max-w-lg lg:w-full lg:px-4"
+>
+  <div class="bg-zinc-900 border border-zinc-700 rounded-t-2xl lg:rounded-2xl shadow-2xl overflow-hidden
+              max-h-[80vh] lg:max-h-[65vh] flex flex-col">
+    
+    <!-- Header con input -->
+    <div class="p-4 border-b border-zinc-800">
+      <div class="relative">
+        <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          id="cmd-input"
+          type="text"
+          placeholder="Buscar sección..."
+          class="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-10 pr-10 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          autocomplete="off"
+        />
+        <button
+          id="cmd-close"
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Filtros por nivel -->
+      <div class="flex gap-2 mt-3 flex-wrap">
+        <button
+          data-cmd-filter="essential"
+          data-cmd-filter-type="level"
+          class="cmd-filter flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 transition-colors"
+        >
+          <span class="w-2 h-2 rounded-full bg-red-500"></span>
+          Esencial
+        </button>
+        <button
+          data-cmd-filter="frequent"
+          data-cmd-filter-type="level"
+          class="cmd-filter flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 transition-colors"
+        >
+          <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
+          Frecuente
+        </button>
+        <button
+          data-cmd-filter="reference"
+          data-cmd-filter-type="level"
+          class="cmd-filter flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 transition-colors"
+        >
+          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+          Referencia
+        </button>
+        <button
+          data-cmd-filter="rare"
+          data-cmd-filter-type="level"
+          class="cmd-filter flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 transition-colors"
+        >
+          <span class="w-2 h-2 rounded-full bg-zinc-400"></span>
+          Raro
+        </button>
+      </div>
+
+      <!-- Filtros por dominio -->
+      <div class="flex gap-2 mt-2 flex-wrap">
+        <button
+          data-cmd-filter="3"
+          data-cmd-filter-type="mastery"
+          class="cmd-filter flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 transition-colors"
+        >
+          ⭐⭐⭐
+        </button>
+        <button
+          data-cmd-filter="2"
+          data-cmd-filter-type="mastery"
+          class="cmd-filter flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 transition-colors"
+        >
+          ⭐⭐
+        </button>
+        <button
+          data-cmd-filter="1"
+          data-cmd-filter-type="mastery"
+          class="cmd-filter flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 transition-colors"
+        >
+          ⭐
+        </button>
+        <button
+          data-cmd-filter="0"
+          data-cmd-filter-type="mastery"
+          class="cmd-filter flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 transition-colors"
+        >
+          <span class="w-2 h-2 rounded-full border border-zinc-500"></span>
+          No leído
+        </button>
+      </div>
+    </div>
+
+    <!-- Lista de resultados -->
+    <div id="cmd-results" class="flex-1 overflow-y-auto p-2">
+      {h2Headings.map((heading) => {
+        const level = getLevel(heading.text);
+        const mastery = getMastery(heading.text);
+        const levelColor = level === 'essential' ? 'bg-red-500' : 
+                          level === 'frequent' ? 'bg-yellow-500' : 
+                          level === 'reference' ? 'bg-blue-500' : 
+                          level === 'rare' ? 'bg-zinc-400' : 'bg-zinc-500';
+        return (
+          <a
+            href={`#${heading.slug}`}
+            data-cmd-item
+            data-level={level}
+            data-mastery={mastery}
+            data-text={cleanText(heading.text).toLowerCase()}
+            class="cmd-item flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 transition-colors cursor-pointer"
+          >
+            <span class={`w-2.5 h-2.5 rounded-full ${levelColor} shrink-0`}></span>
+            <span class="flex-1 truncate">{cleanText(heading.text)}</span>
+            {mastery > 0 && (
+              <span class="text-xs shrink-0 opacity-60">{'⭐'.repeat(mastery)}</span>
+            )}
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-zinc-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        );
+      })}
+      
+      <!-- Empty state -->
+      <div id="cmd-empty" class="hidden py-8 text-center text-zinc-500">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p>No se encontraron resultados</p>
+      </div>
+    </div>
+
+    <!-- Footer con tips -->
+    <div class="hidden lg:flex items-center gap-4 px-4 py-2 border-t border-zinc-800 text-xs text-zinc-500">
+      <span class="flex items-center gap-1">
+        <kbd class="bg-zinc-800 px-1.5 py-0.5 rounded">↑↓</kbd>
+        navegar
+      </span>
+      <span class="flex items-center gap-1">
+        <kbd class="bg-zinc-800 px-1.5 py-0.5 rounded">↵</kbd>
+        seleccionar
+      </span>
+      <span class="flex items-center gap-1">
+        <kbd class="bg-zinc-800 px-1.5 py-0.5 rounded">esc</kbd>
+        cerrar
+      </span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Asegurar que el estado global existe
+  declare global {
+    interface Window {
+      cheatsheetFilters: {
+        levels: Set<string>;
+        masteries: Set<string>;
+      };
+    }
+  }
+  window.cheatsheetFilters = window.cheatsheetFilters || {
+    levels: new Set<string>(),
+    masteries: new Set<string>(),
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const trigger = document.getElementById('cmd-trigger');
+    const triggerDesktop = document.getElementById('cmd-trigger-desktop');
+    const backdrop = document.getElementById('cmd-backdrop');
+    const modal = document.getElementById('cmd-modal');
+    const input = document.getElementById('cmd-input') as HTMLInputElement;
+    const closeBtn = document.getElementById('cmd-close');
+    const items = document.querySelectorAll('[data-cmd-item]');
+    const filterBtns = document.querySelectorAll('.cmd-filter');
+    const emptyState = document.getElementById('cmd-empty');
+
+    let selectedIndex = -1;
+
+    // Actualizar UI de los botones del Command Menu
+    const updateCommandMenuUI = () => {
+      filterBtns.forEach((btn) => {
+        const filter = (btn as HTMLElement).dataset.cmdFilter || '';
+        const filterType = (btn as HTMLElement).dataset.cmdFilterType || '';
+        
+        const isActive = filterType === 'level'
+          ? window.cheatsheetFilters.levels.has(filter)
+          : window.cheatsheetFilters.masteries.has(filter);
+        
+        if (isActive) {
+          btn.classList.add('border-blue-500', 'bg-blue-500/20', 'text-zinc-100');
+          btn.classList.remove('border-zinc-700', 'text-zinc-400');
+        } else {
+          btn.classList.remove('border-blue-500', 'bg-blue-500/20', 'text-zinc-100');
+          btn.classList.add('border-zinc-700', 'text-zinc-400');
+        }
+      });
+    };
+
+    // Abrir modal
+    const openModal = () => {
+      backdrop?.classList.remove('hidden');
+      modal?.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        backdrop?.classList.remove('opacity-0');
+        modal?.classList.remove('opacity-0');
+        modal?.classList.remove('translate-y-4');
+      });
+      input?.focus();
+      document.body.style.overflow = 'hidden';
+      
+      // Sincronizar UI con estado global
+      updateCommandMenuUI();
+      filterItemsList();
+    };
+
+    // Cerrar modal
+    const closeModal = () => {
+      backdrop?.classList.add('opacity-0');
+      modal?.classList.add('opacity-0');
+      modal?.classList.add('translate-y-4');
+      setTimeout(() => {
+        backdrop?.classList.add('hidden');
+        modal?.classList.add('hidden');
+        if (input) input.value = '';
+        selectedIndex = -1;
+        updateSelection();
+        filterItemsList();
+      }, 200);
+      document.body.style.overflow = '';
+    };
+
+    // Filtrar items de la lista del modal (lógica AND)
+    const filterItemsList = () => {
+      const query = input?.value.toLowerCase() || '';
+      const { levels, masteries } = window.cheatsheetFilters;
+      let visibleCount = 0;
+
+      items.forEach((item) => {
+        const text = (item as HTMLElement).dataset.text || '';
+        const level = (item as HTMLElement).dataset.level || '';
+        const mastery = (item as HTMLElement).dataset.mastery || '0';
+        
+        const matchesQuery = text.includes(query);
+        const matchesLevel = levels.size === 0 || levels.has(level);
+        const matchesMastery = masteries.size === 0 || masteries.has(mastery);
+        
+        const isVisible = matchesQuery && matchesLevel && matchesMastery;
+        (item as HTMLElement).style.display = isVisible ? '' : 'none';
+        
+        if (isVisible) visibleCount++;
+      });
+
+      // Mostrar/ocultar empty state
+      if (emptyState) {
+        if (visibleCount === 0) {
+          emptyState.classList.remove('hidden');
+        } else {
+          emptyState.classList.add('hidden');
+        }
+      }
+
+      selectedIndex = -1;
+      updateSelection();
+    };
+
+    // Actualizar selección visual
+    const updateSelection = () => {
+      const visibleItems = Array.from(items).filter(
+        (item) => (item as HTMLElement).style.display !== 'none'
+      );
+      
+      visibleItems.forEach((item, index) => {
+        if (index === selectedIndex) {
+          item.classList.add('bg-zinc-800', 'text-zinc-100');
+        } else {
+          item.classList.remove('bg-zinc-800', 'text-zinc-100');
+        }
+      });
+    };
+
+    // Navegación con teclado
+    const navigate = (direction: 'up' | 'down') => {
+      const visibleItems = Array.from(items).filter(
+        (item) => (item as HTMLElement).style.display !== 'none'
+      );
+      
+      if (visibleItems.length === 0) return;
+
+      if (direction === 'down') {
+        selectedIndex = selectedIndex < visibleItems.length - 1 ? selectedIndex + 1 : 0;
+      } else {
+        selectedIndex = selectedIndex > 0 ? selectedIndex - 1 : visibleItems.length - 1;
+      }
+
+      updateSelection();
+      visibleItems[selectedIndex]?.scrollIntoView({ block: 'nearest' });
+    };
+
+    // Seleccionar item
+    const selectItem = () => {
+      const visibleItems = Array.from(items).filter(
+        (item) => (item as HTMLElement).style.display !== 'none'
+      );
+      
+      if (selectedIndex >= 0 && selectedIndex < visibleItems.length) {
+        (visibleItems[selectedIndex] as HTMLAnchorElement).click();
+      }
+    };
+
+    // Event: Click en item (cerrar modal y navegar)
+    items.forEach((item) => {
+      item.addEventListener('click', () => {
+        closeModal();
+      });
+    });
+
+    // Event: Triggers
+    trigger?.addEventListener('click', openModal);
+    triggerDesktop?.addEventListener('click', openModal);
+
+    // Event: Cerrar
+    backdrop?.addEventListener('click', closeModal);
+    closeBtn?.addEventListener('click', closeModal);
+
+    // Event: Input
+    input?.addEventListener('input', filterItemsList);
+
+    // Event: Filtros del Command Menu (sincronizado con estado global)
+    filterBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const filter = (btn as HTMLElement).dataset.cmdFilter || '';
+        const filterType = (btn as HTMLElement).dataset.cmdFilterType || '';
+        
+        const targetSet = filterType === 'level'
+          ? window.cheatsheetFilters.levels
+          : window.cheatsheetFilters.masteries;
+        
+        if (targetSet.has(filter)) {
+          targetSet.delete(filter);
+        } else {
+          targetSet.add(filter);
+        }
+        
+        // Actualizar UI local
+        updateCommandMenuUI();
+        filterItemsList();
+        
+        // Emitir evento para sincronizar con Sidebar y aplicar filtros al contenido
+        window.dispatchEvent(new CustomEvent('filters-changed'));
+      });
+    });
+
+    // Escuchar cambios de filtros (desde Sidebar)
+    window.addEventListener('filters-changed', () => {
+      updateCommandMenuUI();
+      filterItemsList();
+    });
+
+    // Event: Teclado global
+    document.addEventListener('keydown', (e) => {
+      // Abrir con Ctrl+K o Cmd+K
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        if (modal?.classList.contains('hidden')) {
+          openModal();
+        } else {
+          closeModal();
+        }
+      }
+
+      // Solo si el modal está abierto
+      if (!modal?.classList.contains('hidden')) {
+        if (e.key === 'Escape') {
+          closeModal();
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          navigate('down');
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          navigate('up');
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          selectItem();
+        }
+      }
+    });
+
+    // Inicializar UI
+    updateCommandMenuUI();
+  });
+</script>

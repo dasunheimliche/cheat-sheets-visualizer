@@ -1,0 +1,82 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const allCheatsheets = await getCollection('cheatsheets');
+  
+  const topics = new Set<string>();
+  allCheatsheets.forEach((entry) => {
+    const topic = entry.slug.split('/')[0];
+    if (!topic.startsWith('_')) {
+      topics.add(topic);
+    }
+  });
+
+  return Array.from(topics).map((topic) => ({
+    params: { topic },
+  }));
+}
+
+const { topic } = Astro.params;
+
+const allCheatsheets = await getCollection('cheatsheets');
+
+const types = new Set<string>();
+allCheatsheets.forEach((entry) => {
+  const parts = entry.slug.split('/');
+  if (parts[0] === topic && parts[1] && !parts[1].startsWith('_')) {
+    types.add(parts[1]);
+  }
+});
+
+const typeList = Array.from(types).sort();
+
+const typeIcons: Record<string, string> = {
+  'cheat-sheets': '📋',
+  'tutorials': '📖',
+  'notes': '📝',
+  'exercises': '💪',
+  'projects': '🚀',
+};
+
+const getIcon = (type: string) => typeIcons[type] || '📁';
+---
+
+<BaseLayout title={`${topic} | CheatSheets Visualizer`}>
+  <main class="min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+      <nav class="text-sm mb-8">
+        <ol class="flex items-center gap-2 text-zinc-400">
+          <li><a href="/" class="hover:text-zinc-200">Home</a></li>
+          <li>/</li>
+          <li><a href="/topics" class="hover:text-zinc-200">Topics</a></li>
+          <li>/</li>
+          <li class="text-zinc-200 capitalize">{topic}</li>
+        </ol>
+      </nav>
+
+      <div class="mb-12">
+        <h1 class="text-4xl font-bold mb-2 capitalize">📚 {topic?.replace(/-/g, ' ')}</h1>
+        <p class="text-zinc-400">Selecciona el tipo de contenido</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {typeList.map((type) => (
+          <a 
+            href={`/topics/${topic}/${type}`}
+            class="group bg-zinc-900 border border-zinc-800 rounded-xl p-6 hover:border-zinc-600 transition-all hover:bg-zinc-800/50"
+          >
+            <div class="text-4xl mb-4">{getIcon(type)}</div>
+            <h2 class="text-xl font-semibold capitalize group-hover:text-blue-400 transition-colors">
+              {type.replace(/-/g, ' ')}
+            </h2>
+            <p class="text-zinc-500 text-sm mt-2">
+              Explora {type.replace(/-/g, ' ')}
+            </p>
+          </a>
+        ))}
+      </div>
+    </div>
+  </main>
+</BaseLayout>

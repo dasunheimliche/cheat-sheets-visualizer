@@ -1,0 +1,100 @@
+---
+import BaseLayout from '../../../../../layouts/BaseLayout.astro';
+import TableOfContents from '../../../../../components/TableOfContents.astro';
+import CommandMenu from '../../../../../components/CommandMenu.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const allCheatsheets = await getCollection('cheatsheets');
+  
+  return allCheatsheets
+    .filter((entry) => {
+      const parts = entry.slug.split('/');
+      const hasValidStructure = parts.length >= 4;
+      const noUnderscoreParts = !parts.some(p => p.startsWith('_'));
+      return hasValidStructure && noUnderscoreParts;
+    })
+    .map((entry) => {
+      const parts = entry.slug.split('/');
+      const topic = parts[0];
+      const type = parts[1];
+      const source = parts[2];
+      const slug = parts.slice(3).join('/');
+      
+      return {
+        params: { topic, type, source, slug },
+        props: { entry },
+      };
+    });
+}
+
+const { entry } = Astro.props;
+const { topic, type, source } = Astro.params;
+
+const { Content, headings } = await entry.render();
+
+const displayTitle = entry.data.title || entry.slug.split('/').pop()?.replace(/-/g, ' ') || 'Cheatsheet';
+---
+
+<BaseLayout title={`${displayTitle} | CheatSheets Visualizer`}>
+  <main class="min-h-screen p-4 lg:p-8">
+    <div class="max-w-7xl mx-auto">
+      <nav class="text-sm mb-6 lg:mb-8 overflow-x-auto">
+        <ol class="flex items-center gap-2 text-zinc-400 whitespace-nowrap">
+          <li><a href="/" class="hover:text-zinc-200">Home</a></li>
+          <li>/</li>
+          <li><a href="/topics" class="hover:text-zinc-200">Topics</a></li>
+          <li>/</li>
+          <li><a href={`/topics/${topic}`} class="hover:text-zinc-200 capitalize">{topic}</a></li>
+          <li>/</li>
+          <li><a href={`/topics/${topic}/${type}`} class="hover:text-zinc-200 capitalize">{type?.replace(/-/g, ' ')}</a></li>
+          <li>/</li>
+          <li><a href={`/topics/${topic}/${type}/${source}`} class="hover:text-zinc-200">{source?.replace(/-/g, ' ')}</a></li>
+          <li>/</li>
+          <li class="text-zinc-200 capitalize truncate max-w-[150px]">{displayTitle}</li>
+        </ol>
+      </nav>
+
+      <div class="flex gap-8">
+        <TableOfContents headings={headings} />
+
+        <div class="flex-1 min-w-0">
+          <header class="mb-8 lg:mb-10 pb-6 border-b border-zinc-800">
+            <h1 class="text-3xl lg:text-4xl font-bold mb-3 capitalize">{displayTitle}</h1>
+            {entry.data.description && (
+              <p class="text-lg lg:text-xl text-zinc-400">{entry.data.description}</p>
+            )}
+            
+            {entry.data.tags && entry.data.tags.length > 0 && (
+              <div class="flex gap-2 mt-4 flex-wrap">
+                {entry.data.tags.map((tag: string) => (
+                  <span class="bg-zinc-800 text-zinc-300 text-sm px-3 py-1 rounded-full">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </header>
+
+          <article class="prose-cheatsheet">
+            <Content />
+          </article>
+
+          <div class="mt-12 pt-6 border-t border-zinc-800">
+            <a 
+              href={`/topics/${topic}/${type}/${source}`}
+              class="inline-flex items-center gap-2 text-zinc-400 hover:text-zinc-200 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+              </svg>
+              Volver a la lista
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <CommandMenu headings={headings} />
+</BaseLayout>

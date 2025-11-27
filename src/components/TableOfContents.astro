@@ -1,0 +1,345 @@
+---
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  headings: Heading[];
+}
+
+const { headings } = Astro.props;
+
+// Filtrar solo h2 (## A - Título)
+const h2Headings = headings.filter((h) => h.depth === 2);
+
+// Extraer nivel del heading (color)
+const getLevel = (text: string): 'essential' | 'frequent' | 'reference' | 'rare' | 'none' => {
+  if (text.includes('🔴')) return 'essential';
+  if (text.includes('🟡')) return 'frequent';
+  if (text.includes('🔵')) return 'reference';
+  if (text.includes('⚪')) return 'rare';
+  return 'none';
+};
+
+// Extraer dominio del heading (estrellas)
+const getMastery = (text: string): number => {
+  const stars = (text.match(/⭐/g) || []).length;
+  return Math.min(stars, 3); // Máximo 3
+};
+
+// Color del borde según nivel
+const getLevelColor = (level: string): string => {
+  if (level === 'essential') return 'border-red-500';
+  if (level === 'frequent') return 'border-yellow-500';
+  if (level === 'reference') return 'border-blue-500';
+  if (level === 'rare') return 'border-zinc-400';
+  return 'border-zinc-600';
+};
+
+// Limpiar texto para mostrar (remover emojis de nivel y estrellas)
+const cleanText = (text: string): string => {
+  return text.replace(/🔴|🟡|🔵|⚪|⭐/g, '').trim();
+};
+
+// Contar por nivel
+const levelCounts = {
+  essential: h2Headings.filter(h => getLevel(h.text) === 'essential').length,
+  frequent: h2Headings.filter(h => getLevel(h.text) === 'frequent').length,
+  reference: h2Headings.filter(h => getLevel(h.text) === 'reference').length,
+  rare: h2Headings.filter(h => getLevel(h.text) === 'rare').length,
+};
+
+// Contar por dominio
+const masteryCounts = {
+  3: h2Headings.filter(h => getMastery(h.text) === 3).length,
+  2: h2Headings.filter(h => getMastery(h.text) === 2).length,
+  1: h2Headings.filter(h => getMastery(h.text) === 1).length,
+  0: h2Headings.filter(h => getMastery(h.text) === 0).length,
+};
+---
+
+{h2Headings.length > 0 && (
+  <nav class="toc hidden lg:block w-56 shrink-0">
+    <div class="sticky top-8 flex flex-col max-h-[calc(100vh-4rem)]">
+      <!-- Botón Command Menu (desktop) -->
+      <button
+        id="cmd-trigger-desktop"
+        class="w-full flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors mb-6 shrink-0"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <span>Buscar...</span>
+        <kbd class="ml-auto text-xs bg-zinc-700 px-1.5 py-0.5 rounded">⌘K</kbd>
+      </button>
+
+      <!-- Filtros por nivel -->
+      <div class="mb-4 shrink-0">
+        <h2 class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+          Por nivel
+        </h2>
+        <div class="flex flex-col gap-1.5">
+          <button
+            data-filter="essential"
+            data-filter-type="level"
+            class="filter-btn flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-800 transition-colors text-left"
+          >
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0"></span>
+            <span class="text-zinc-300 text-xs">Esencial</span>
+            <span class="ml-auto text-zinc-500 text-xs">{levelCounts.essential}</span>
+          </button>
+          <button
+            data-filter="frequent"
+            data-filter-type="level"
+            class="filter-btn flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-800 transition-colors text-left"
+          >
+            <span class="w-2.5 h-2.5 rounded-full bg-yellow-500 shrink-0"></span>
+            <span class="text-zinc-300 text-xs">Frecuente</span>
+            <span class="ml-auto text-zinc-500 text-xs">{levelCounts.frequent}</span>
+          </button>
+          <button
+            data-filter="reference"
+            data-filter-type="level"
+            class="filter-btn flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-800 transition-colors text-left"
+          >
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span>
+            <span class="text-zinc-300 text-xs">Referencia</span>
+            <span class="ml-auto text-zinc-500 text-xs">{levelCounts.reference}</span>
+          </button>
+          <button
+            data-filter="rare"
+            data-filter-type="level"
+            class="filter-btn flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-800 transition-colors text-left"
+          >
+            <span class="w-2.5 h-2.5 rounded-full bg-zinc-400 shrink-0"></span>
+            <span class="text-zinc-300 text-xs">Raro</span>
+            <span class="ml-auto text-zinc-500 text-xs">{levelCounts.rare}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filtros por dominio -->
+      <div class="mb-4 shrink-0">
+        <h2 class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+          Por dominio
+        </h2>
+        <div class="flex flex-col gap-1.5">
+          <button
+            data-filter="3"
+            data-filter-type="mastery"
+            class="filter-btn flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-800 transition-colors text-left"
+          >
+            <span class="text-xs shrink-0">⭐⭐⭐</span>
+            <span class="text-zinc-300 text-xs">Dominado</span>
+            <span class="ml-auto text-zinc-500 text-xs">{masteryCounts[3]}</span>
+          </button>
+          <button
+            data-filter="2"
+            data-filter-type="mastery"
+            class="filter-btn flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-800 transition-colors text-left"
+          >
+            <span class="text-xs shrink-0">⭐⭐</span>
+            <span class="text-zinc-300 text-xs">Básico</span>
+            <span class="ml-auto text-zinc-500 text-xs">{masteryCounts[2]}</span>
+          </button>
+          <button
+            data-filter="1"
+            data-filter-type="mastery"
+            class="filter-btn flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-800 transition-colors text-left"
+          >
+            <span class="text-xs shrink-0">⭐</span>
+            <span class="text-zinc-300 text-xs">Conocido</span>
+            <span class="ml-auto text-zinc-500 text-xs">{masteryCounts[1]}</span>
+          </button>
+          <button
+            data-filter="0"
+            data-filter-type="mastery"
+            class="filter-btn flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-800 transition-colors text-left"
+          >
+            <span class="w-2.5 h-2.5 rounded-full border border-zinc-600 shrink-0"></span>
+            <span class="text-zinc-300 text-xs">No leído</span>
+            <span class="ml-auto text-zinc-500 text-xs">{masteryCounts[0]}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Índice -->
+      <div class="flex flex-col min-h-0">
+        <h2 class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3 shrink-0">
+          Índice
+        </h2>
+        <ul class="space-y-1 overflow-y-auto max-h-[30vh] custom-scrollbar pr-1">
+          {h2Headings.map((heading) => {
+            const level = getLevel(heading.text);
+            const mastery = getMastery(heading.text);
+            return (
+              <li>
+                <a
+                  href={`#${heading.slug}`}
+                  data-level={level}
+                  data-mastery={mastery}
+                  class={`
+                    toc-link flex items-center gap-2 text-sm py-1.5 px-3 rounded-md
+                    border-l-2 ${getLevelColor(level)}
+                    text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50
+                    transition-colors
+                  `}
+                  title={cleanText(heading.text)}
+                >
+                  <span class="truncate flex-1">{cleanText(heading.text)}</span>
+                  {mastery > 0 && (
+                    <span class="text-xs shrink-0 opacity-60">{'⭐'.repeat(mastery)}</span>
+                  )}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  </nav>
+)}
+
+<script>
+  // Estado global de filtros (compartido entre sidebar y command menu)
+  declare global {
+    interface Window {
+      cheatsheetFilters: {
+        levels: Set<string>;
+        masteries: Set<string>;
+      };
+    }
+  }
+  window.cheatsheetFilters = window.cheatsheetFilters || {
+    levels: new Set<string>(),
+    masteries: new Set<string>(),
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const tocLinks = document.querySelectorAll('.toc-link');
+
+    // Encontrar todas las secciones h2 en el contenido
+    const getSections = () => {
+      const article = document.querySelector('.prose-cheatsheet');
+      if (!article) return [];
+      
+      const sections: { heading: Element; content: Element[] }[] = [];
+      let currentSection: { heading: Element; content: Element[] } | null = null;
+      
+      article.childNodes.forEach((node) => {
+        if (node instanceof Element) {
+          if (node.tagName === 'H2') {
+            if (currentSection) sections.push(currentSection);
+            currentSection = { heading: node, content: [] };
+          } else if (currentSection) {
+            currentSection.content.push(node);
+          }
+        }
+      });
+      
+      if (currentSection) sections.push(currentSection);
+      return sections;
+    };
+
+    // Determinar el nivel de una sección por su texto
+    const getLevel = (text: string): string => {
+      if (text.includes('🔴')) return 'essential';
+      if (text.includes('🟡')) return 'frequent';
+      if (text.includes('🔵')) return 'reference';
+      if (text.includes('⚪')) return 'rare';
+      return 'none';
+    };
+
+    // Determinar el dominio de una sección por su texto
+    const getMastery = (text: string): string => {
+      const stars = (text.match(/⭐/g) || []).length;
+      return String(Math.min(stars, 3));
+    };
+
+    // Aplicar filtros al contenido (lógica AND)
+    const applyFilters = () => {
+      const { levels, masteries } = window.cheatsheetFilters;
+      const sections = getSections();
+      
+      sections.forEach(({ heading, content }) => {
+        const level = getLevel(heading.textContent || '');
+        const mastery = getMastery(heading.textContent || '');
+        
+        // Lógica AND: debe cumplir ambos filtros si están activos
+        const matchesLevel = levels.size === 0 || levels.has(level);
+        const matchesMastery = masteries.size === 0 || masteries.has(mastery);
+        const shouldShow = matchesLevel && matchesMastery;
+        
+        const display = shouldShow ? '' : 'none';
+        (heading as HTMLElement).style.display = display;
+        content.forEach((el) => {
+          (el as HTMLElement).style.display = display;
+        });
+      });
+
+      // Actualizar visibilidad en el índice
+      tocLinks.forEach((link) => {
+        const level = (link as HTMLElement).dataset.level || '';
+        const mastery = (link as HTMLElement).dataset.mastery || '0';
+        
+        const matchesLevel = levels.size === 0 || levels.has(level);
+        const matchesMastery = masteries.size === 0 || masteries.has(mastery);
+        const shouldShow = matchesLevel && matchesMastery;
+        
+        (link.parentElement as HTMLElement).style.display = shouldShow ? '' : 'none';
+      });
+    };
+
+    // Actualizar UI de los botones del sidebar
+    const updateSidebarUI = () => {
+      filterBtns.forEach((btn) => {
+        const filter = (btn as HTMLElement).dataset.filter || '';
+        const filterType = (btn as HTMLElement).dataset.filterType || '';
+        
+        const isActive = filterType === 'level' 
+          ? window.cheatsheetFilters.levels.has(filter)
+          : window.cheatsheetFilters.masteries.has(filter);
+        
+        if (isActive) {
+          btn.classList.add('ring-2', 'ring-offset-2', 'ring-offset-zinc-950', 'ring-blue-500');
+        } else {
+          btn.classList.remove('ring-2', 'ring-offset-2', 'ring-offset-zinc-950', 'ring-blue-500');
+        }
+      });
+    };
+
+    // Event listeners para filtros del sidebar
+    filterBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const filter = (btn as HTMLElement).dataset.filter || '';
+        const filterType = (btn as HTMLElement).dataset.filterType || '';
+        
+        const targetSet = filterType === 'level' 
+          ? window.cheatsheetFilters.levels 
+          : window.cheatsheetFilters.masteries;
+        
+        if (targetSet.has(filter)) {
+          targetSet.delete(filter);
+        } else {
+          targetSet.add(filter);
+        }
+        
+        // Emitir evento para sincronizar con Command Menu
+        window.dispatchEvent(new CustomEvent('filters-changed'));
+      });
+    });
+
+    // Escuchar cambios de filtros (desde Command Menu u otro lugar)
+    window.addEventListener('filters-changed', () => {
+      updateSidebarUI();
+      applyFilters();
+    });
+
+    // Inicializar
+    updateSidebarUI();
+    applyFilters();
+  });
+</script>
