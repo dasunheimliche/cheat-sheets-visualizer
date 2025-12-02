@@ -2,6 +2,7 @@
 title: "1.0 - Mapa de Ruta: Fundamentos de Sistemas de Datos"
 description: "Visión general de los conceptos fundamentales que rigen todos los sistemas de datos, desde máquinas individuales hasta clusters."
 tags: ["architecture", "databases", "fundamentals", "roadmap"]
+prompt-version: cheat-sheet-generator-1.1
 ---
 
 ## A - Fundamentos Universales de Datos [🔴]
