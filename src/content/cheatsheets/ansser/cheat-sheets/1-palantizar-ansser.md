@@ -1,3 +1,10 @@
+---
+title: "1.01 - sdf"
+description: "Guía essntes en "
+tags: ["python", "fastapi", "typing", "pydantic"]
+prompt-version: cheat-sheet-generator-1.1
+---
+
 # 🚀 IA Operativa Estilo Palantir para PYMEs
 
 ## Documentación de Estrategia de Producto
